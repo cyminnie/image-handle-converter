@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f4f1">
+  <title>圖片 Handle 轉換器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #282a2e;
+      --muted: #6f737a;
+      --line: #dedbd5;
+      --paper: #fff;
+      --canvas: #f6f4f1;
+      --accent: #8b5b2b;
+      --accent-dark: #67401d;
+      --success: #347456;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: "Segoe UI", "Noto Sans HK", "Microsoft JhengHei", sans-serif;
+      line-height: 1.55;
+    }
+    main { width: min(860px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0; }
+    .eyebrow { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(30px, 5vw, 42px); line-height: 1.15; letter-spacing: -.03em; }
+    .intro { max-width: 660px; margin: 0 0 28px; color: var(--muted); }
+    .card { padding: 24px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 32px #33220b0a; }
+    .field-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 9px; }
+    label { font-size: 15px; font-weight: 700; }
+    .hint, .count { color: var(--muted); font-size: 12px; }
+    .count { white-space: nowrap; }
+    textarea {
+      display: block; width: 100%; min-height: 150px; padding: 14px 15px;
+      resize: vertical; border: 1px solid var(--line); border-radius: 10px;
+      background: #fff; color: var(--ink); font: 15px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #8b5b2b1a; }
+    .sample { margin: 9px 0 20px; color: var(--muted); font-size: 13px; }
+    .sample code { padding: 2px 6px; border-radius: 5px; background: #f0ede8; color: var(--accent-dark); }
+    .output-head { margin-top: 22px; }
+    .output { min-height: 56px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button {
+      min-height: 42px; padding: 9px 15px; border: 1px solid transparent; border-radius: 9px;
+      font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    button:focus-visible { outline: 3px solid #8b5b2b55; outline-offset: 2px; }
+    .primary { background: var(--accent); color: #fff; }
+    .primary:hover { background: var(--accent-dark); }
+    .secondary { border-color: var(--line); background: #fff; color: var(--ink); }
+    .secondary:hover { background: #f7f5f2; }
+    #status { min-height: 20px; margin: 10px 0 0; color: var(--success); font-size: 13px; }
+    .rule { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media (max-width: 560px) {
+      main { padding: 36px 0; }
+      .card { padding: 18px; }
+      .field-head { align-items: flex-start; flex-direction: column; gap: 3px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Tineco · 工具</div>
+    <h1>圖片 Handle 轉換器</h1>
+    <p class="intro">把圖片名稱整理成小寫、以連字號分隔的格式。每行輸入一個名稱，可一次轉換多個檔名。</p>
+
+    <section class="card" aria-label="圖片 Handle 轉換工具">
+      <div class="field-head">
+        <label for="source">圖片名稱</label>
+        <span class="hint">底線、空格及標點會轉成連字號</span>
+      </div>
+      <textarea id="source" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Steam_pro_P1_PC"></textarea>
+      <p class="sample">例如：<code>Steam_pro_P1_PC</code> → <code>steam-pro-p1-pc</code></p>
+
+      <div class="field-head output-head">
+        <label for="result">轉換結果</label>
+        <span class="count" id="count">0 個結果</span>
+      </div>
+      <textarea id="result" class="output" readonly aria-live="polite" placeholder="結果會即時顯示"></textarea>
+      <div class="actions">
+        <button class="primary" id="copy" type="button">複製結果</button>
+        <button class="secondary" id="clear" type="button">清除</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <p class="rule">轉換規則：英文字母轉小寫；底線、空格及其他分隔符統一為單一連字號；移除開頭及結尾的連字號。保留英文字母與數字。</p>
+    </section>
+  </main>
+  <script>
+    const source = document.querySelector('#source');
+    const result = document.querySelector('#result');
+    const count = document.querySelector('#count');
+    const status = document.querySelector('#status');
+
+    function toHandle(value) {
+      return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function convert() {
+      const lines = source.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const converted = lines.map(toHandle).filter(Boolean);
+      result.value = converted.join('\n');
+      count.textContent = `${converted.length} 個結果`;
+      status.textContent = '';
+    }
+
+    source.addEventListener('input', convert);
+    document.querySelector('#copy').addEventListener('click', async () => {
+      if (!result.value) {
+        status.textContent = '請先輸入圖片名稱。';
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(result.value);
+        status.textContent = '已複製轉換結果。';
+      } catch {
+        result.focus();
+        result.select();
+        status.textContent = '請使用 Ctrl+C 或 ⌘C 複製已選取的結果。';
+      }
+    });
+    document.querySelector('#clear').addEventListener('click', () => {
+      source.value = '';
+      convert();
+      source.focus();
+    });
+  </script>
+</body>
+</html>
