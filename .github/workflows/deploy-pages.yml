@@ -30,10 +30,15 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Prepare public site
+        run: |
+          mkdir -p site
+          cp index.html site/index.html
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: site
 
       - name: Deploy site
         id: deployment
